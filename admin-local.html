@@ -8,7 +8,6 @@
         .header { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .date-group label { display: block; font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
         input[type="date"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; outline: none; }
-        input[type="date"]:focus { border-color: #3b82f6; }
         
         .slot-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
         .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
@@ -35,9 +34,8 @@
     <button class="btn btn-reset" onclick="resetSlots()">RESET TANGGAL INI</button>
 
     <script>
-        // Default Tanggal WIB (Serverless logic di Client)
         const now = new Date();
-        now.setHours(now.getHours() + 7); // WIB Adjustment
+        now.setHours(now.getHours() + 7);
         document.getElementById('datePicker').value = now.toISOString().slice(0, 10);
 
         async function getTunnelUrl() {
@@ -57,7 +55,6 @@
             container.style.opacity = '0.5';
 
             try {
-                // Fetch dengan Timestamp agar browser tidak cache
                 const res = await fetch(`/slots?date=${date}&t=${Date.now()}`);
                 const data = await res.json();
                 
