@@ -1,96 +1,113 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <title>Hazi Local Admin</title>
+    <title>Hazi Admin - Multi Date</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background: #f0f0f0; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .slot-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background: #eef2f5; }
+        .header { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .date-group label { display: block; font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
+        input[type="date"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; outline: none; }
+        
+        .slot-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-avail { background: #dcfce7; color: #166534; }
         .btn-booked { background: #fee2e2; color: #991b1b; }
-        .btn-reset { background: #333; color: white; padding: 10px 20px; width: 100%; margin-top: 20px; }
+        .btn-reset { background: #1e293b; color: white; padding: 12px; width: 100%; margin-top: 20px; border-radius: 8px; }
         
-        /* Gaya untuk kotak URL */
-        .url-box { background: #1e293b; color: #4ade80; padding: 15px; border-radius: 8px; margin-bottom: 20px; word-break: break-all; font-family: monospace; border: 1px solid #334155; }
-        .url-label { color: #94a3b8; font-size: 0.8em; display: block; margin-bottom: 5px; }
+        .url-box { background: #0f172a; color: #4ade80; padding: 15px; border-radius: 8px; margin-bottom: 20px; word-break: break-all; font-family: monospace; font-size: 12px; border: 1px solid #334155; }
+        #loading { text-align: center; color: #64748b; font-size: 12px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
+    <div class="url-box" id="cf-url">Loading URL...</div>
+
     <div class="header">
-        <h1>Admin Slot</h1>
-        <div id="date-display" style="color: #666;"></div>
+        <div class="date-group">
+            <label>Pilih Tanggal Booking:</label>
+            <input type="date" id="datePicker" onchange="refresh()">
+        </div>
+        <div id="loading">⏳ Sinkronisasi Data...</div>
     </div>
 
-    <div class="url-box">
-        <span class="url-label">PUBLIC URL (Copy ke Vercel):</span>
-        <div id="cf-url">Loading URL...</div>
-    </div>
-
-    <div id="slots-list">Loading...</div>
-    <button class="btn btn-reset" onclick="resetSlots()">RESET SEMUA SLOT</button>
+    <div id="slots-list"></div>
+    <button class="btn btn-reset" onclick="resetSlots()">RESET TANGGAL INI</button>
 
     <script>
-        const API = 'http://localhost:3000'; // Sesuaikan jika perlu, atau gunakan relatif path jika dibuka lgsg
+        const now = new Date();
+        now.setHours(now.getHours() + 7);
+        document.getElementById('datePicker').value = now.toISOString().slice(0, 10);
 
         async function getTunnelUrl() {
             try {
-                // Panggil API baru yang kita buat di server.js
-                const res = await fetch('/tunnel-url');
+                const res = await fetch('/tunnel-url?t=' + Date.now());
                 const data = await res.json();
                 document.getElementById('cf-url').innerText = data.url;
-            } catch (e) {
-                document.getElementById('cf-url').innerText = "Gagal ambil URL";
-            }
+            } catch (e) { document.getElementById('cf-url').innerText = "Gagal ambil URL"; }
         }
 
         async function refresh() {
-            const res = await fetch(`/slots`);
-            const data = await res.json();
-            document.getElementById('date-display').innerText = data.date;
-            
+            const date = document.getElementById('datePicker').value;
             const container = document.getElementById('slots-list');
-            container.innerHTML = '';
-            const times = ["10:00", "11:00", "12:00", "13:00", "14:00"];
+            const loader = document.getElementById('loading');
+            
+            loader.style.display = 'block';
+            container.style.opacity = '0.5';
 
-            times.forEach(time => {
-                const status = data.slots[time];
-                const el = document.createElement('div');
-                el.className = 'slot-item';
-                const nextStatus = status === 'available' ? 'booked' : 'available';
-                const btnClass = status === 'available' ? 'btn-avail' : 'btn-booked';
+            try {
+                const res = await fetch(`/slots?date=${date}&t=${Date.now()}`);
+                const data = await res.json();
                 
-                el.innerHTML = `
-                    <span style="font-size: 1.2em; font-weight: bold;">${time}</span>
-                    <button class="btn ${btnClass}" onclick="toggle('${time}', '${nextStatus}')">
-                        ${status.toUpperCase()}
-                    </button>
-                `;
-                container.appendChild(el);
-            });
+                container.innerHTML = '';
+                const times = ["10:00", "11:00", "12:00", "13:00", "14:00"];
+
+                times.forEach(time => {
+                    const status = data.slots[time];
+                    const btnClass = status === 'available' ? 'btn-avail' : 'btn-booked';
+                    const nextStatus = status === 'available' ? 'booked' : 'available';
+                    
+                    const el = document.createElement('div');
+                    el.className = 'slot-item';
+                    el.innerHTML = `
+                        <span style="font-weight: bold; font-size:18px">${time}</span>
+                        <button class="btn ${btnClass}" onclick="toggle('${time}', '${nextStatus}')">
+                            ${status.toUpperCase()}
+                        </button>
+                    `;
+                    container.appendChild(el);
+                });
+            } catch (e) {
+                container.innerHTML = '<div style="text-align:center;color:red">Gagal koneksi ke server</div>';
+            } finally {
+                loader.style.display = 'none';
+                container.style.opacity = '1';
+            }
         }
 
         async function toggle(time, status) {
-            await fetch(`/slots`, {
+            const date = document.getElementById('datePicker').value;
+            await fetch('/slots', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ time, status })
+                body: JSON.stringify({ date, time, status })
             });
             refresh();
         }
 
         async function resetSlots() {
-            if(confirm('Reset slot?')) {
-                await fetch(`/reset`, { method: 'POST' });
+            const date = document.getElementById('datePicker').value;
+            if(confirm(`Reset jadwal tanggal ${date}?`)) {
+                await fetch('/reset', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date })
+                });
                 refresh();
             }
         }
 
-        // Jalankan saat load
-        refresh();
         getTunnelUrl();
+        refresh();
     </script>
 </body>
 </html>
-
